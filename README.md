@@ -16,10 +16,14 @@ The Studio and Hub aren't linked from the public page. Bookmark `https://YOUR-DO
 
 You'll need: this GitHub account, the Google account you want to sign in with, and the domain you bought.
 
-### 1. Make this repository private
+### 1. Make this repository private (do this first)
 
 GitHub → this repo → **Settings** → scroll to **Danger Zone** → **Change visibility** → **Private**.
-The code contains no secrets, but your content and Hub shortcuts are saved here, so keep it private.
+While it's public, anyone can see that 3XOBA's site lives under your personal GitHub account. Private also hides your content history and Hub shortcuts. The site works exactly the same from a private repo.
+
+### 1b. Make a separate Google account just for 3XOBA
+
+Create a new Google account (e.g. a 3XOBA Gmail) and use it for **everything below**: the Google Cloud project, signing in to the Hub, and the YouTube key. Anyone can open the Google sign-in screen from your `/login` page, and Google shows the app's support email there, so it must be an artist email, not your personal one.
 
 ### 2. Put the site online with Vercel (free)
 
@@ -57,9 +61,9 @@ Vercel → your project → **Settings → Environment Variables**. Add each of 
 | `AUTH_SECRET` | A long random password, 40+ characters (use a password manager's generator) |
 | `GOOGLE_CLIENT_ID` | From step 3 |
 | `GOOGLE_CLIENT_SECRET` | From step 3 |
-| `OWNER_EMAILS` | Your Google email (add more separated by commas, e.g. a manager) |
+| `OWNER_EMAILS` | Your 3XOBA Google email from step 1b (add more separated by commas, e.g. a manager) |
 | `GITHUB_TOKEN` | From step 4 |
-| `GITHUB_REPO` | `obaonikoyi/3XOBA` |
+| `GITHUB_REPO` | `your-github-username/3XOBA` (the part after github.com/ in this repo's address) |
 | `GITHUB_BRANCH` | `main` |
 | `YOUTUBE_API_KEY` | From step 5 (optional) |
 
@@ -90,8 +94,25 @@ Open `https://YOUR-DOMAIN/hub` → **Continue with Google**. Then go to **Studio
 - **Strict browser rules.** The site sends a Content-Security-Policy with a fresh random code on every page, so the browser runs only this site's own scripts and only loads players from Spotify, Apple Music, YouTube and SoundCloud. It also can't be put inside another site's frame (clickjacking), and HTTPS is enforced.
 - **No database to hack.** Content is a single file in this (private) repo; the GitHub key can only edit this one repo.
 - **Private pages are hidden from Google** and never cached.
+- **Photos are cleaned on upload.** The Studio re-encodes every image, which strips the hidden data phones add (GPS location, phone model, owner name).
 
 **Your part:** turn on 2-step verification for your Google and GitHub accounts, keep this repo private, and never paste keys anywhere except Vercel's settings. If you ever think someone got in, change `AUTH_SECRET` in Vercel and redeploy. That signs out every device instantly.
+
+---
+
+## Keeping your identity private
+
+The public site only ever shows what you type into the Studio. These are the places your real identity could still leak, and what to do:
+
+| Where | What could leak | What to do |
+| --- | --- | --- |
+| This GitHub repo | Your GitHub username next to 3XOBA | Make it **private** (step 1). |
+| Google sign-in screen | The Google Cloud project's support email | Use a **separate 3XOBA Google account** (step 1b). |
+| Domain records (WHOIS) | Your name, address, phone | Turn on **domain privacy / WHOIS privacy** where you bought the domain (usually free). |
+| Vercel | Your Vercel username appears in preview links (`…-yourname.vercel.app`) | Vercel → **Account Settings** → change your username to something neutral. Visitors use your own domain. |
+| Booking email | Your personal address | Use an artist address (e.g. `bookings@your-domain`). |
+| Photos | GPS location, phone, owner name hidden inside the file | Uploads through the Studio are cleaned automatically. Images you **link** from elsewhere aren't, so upload them instead. |
+| Song credits | Songwriter names | DistroKid asks for songwriter real names, and stores can show them in song credits. Check what you enter there. |
 
 ---
 

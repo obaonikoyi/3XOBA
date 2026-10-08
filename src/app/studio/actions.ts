@@ -1,5 +1,7 @@
 "use server";
 
+import sharp from "sharp";
+
 import { requireOwner } from "@/lib/auth/session";
 import { describeIssues, siteSchema } from "@/lib/content/schema";
 import { ContentConflictError, saveContent, saveUpload, storageMode } from "@/lib/content/store";
@@ -49,6 +51,21 @@ function sniffImage(bytes: Buffer): "jpg" | "png" | "webp" | null {
   return null;
 }
 
+/**
+ * Re-encode the image. This throws away every bit of hidden metadata a phone
+ * or camera adds (GPS location, device, owner name, edit history), applies the
+ * photo's rotation, and caps the size at 3000px — so nothing about where or by
+ * whom a photo was taken ends up on the public site.
+ */
+async function cleanImage(bytes: Buffer, ext: "jpg" | "png" | "webp"): Promise<Buffer> {
+  const image = sharp(bytes, { limitInputPixels: 60_000_000 })
+    .autoOrient()
+    .resize({ width: 3000, height: 3000, fit: "inside", withoutEnlargement: true });
+  if (ext === "jpg") return image.jpeg({ quality: 88, mozjpeg: true }).toBuffer();
+  if (ext === "png") return image.png({ compressionLevel: 9 }).toBuffer();
+  return image.webp({ quality: 88 }).toBuffer();
+}
+
 export type UploadResult = { ok: true; path: string } | { ok: false; error: string };
 
 export async function uploadImage(formData: FormData): Promise<UploadResult> {
@@ -62,8 +79,15 @@ export async function uploadImage(formData: FormData): Promise<UploadResult> {
   const ext = sniffImage(bytes);
   if (!ext) return { ok: false, error: "Only JPG, PNG or WebP images can be uploaded." };
 
+  let clean: Buffer;
   try {
-    return { ok: true, path: await saveUpload(bytes, ext) };
+    clean = await cleanImage(bytes, ext);
+  } catch {
+    return { ok: false, error: "That image couldn't be read. Try exporting it again as a JPG." };
+  }
+
+  try {
+    return { ok: true, path: await saveUpload(clean, ext) };
   } catch (error) {
     console.error("Studio upload failed", error);
     return { ok: false, error: error instanceof Error && error.message.includes("README") ? error.message : "Upload failed. Please try again." };
