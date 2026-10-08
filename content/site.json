@@ -1,0 +1,49 @@
+{
+  "artist": {
+    "name": "3XOBA",
+    "tagline": "Official home of 3XOBA. New music, videos and shows.",
+    "bio": "",
+    "location": "",
+    "heroImage": "",
+    "photo": ""
+  },
+  "theme": {
+    "accent": "#e8b04b"
+  },
+  "links": {
+    "spotify": "",
+    "appleMusic": "",
+    "youtube": "",
+    "youtubeMusic": "",
+    "audiomack": "",
+    "boomplay": "",
+    "soundcloud": "",
+    "deezer": "",
+    "tidal": "",
+    "amazonMusic": "",
+    "tiktok": "",
+    "instagram": "",
+    "x": "",
+    "facebook": "",
+    "snapchat": "",
+    "threads": ""
+  },
+  "releases": [],
+  "videos": {
+    "autoFromYouTube": false,
+    "youtubeChannelId": "",
+    "items": []
+  },
+  "shows": [],
+  "contact": {
+    "bookingEmail": "",
+    "pressKitUrl": ""
+  },
+  "newsletter": {
+    "url": "",
+    "label": "Get new music first"
+  },
+  "hub": {
+    "links": []
+  }
+}
