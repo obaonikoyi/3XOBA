@@ -10,6 +10,8 @@ import {
   RELEASE_TYPES,
   SOCIAL_PLATFORMS,
   type HubLink,
+  type PressHighlight,
+  type PressPhoto,
   type Release,
   type Show,
   type SiteContent,
@@ -18,8 +20,9 @@ import {
 import type { Storage } from "@/lib/content/store";
 import { GROUP_TITLES } from "@/lib/hub-links";
 import { PLATFORMS } from "@/lib/platforms";
+import { releaseSlug, slugify, slugInput } from "@/lib/slug";
 
-const TABS = ["Profile", "Links", "Releases", "Videos", "Shows", "Contact", "Look", "Hub shortcuts"] as const;
+const TABS = ["Profile", "Links", "Releases", "Videos", "Shows", "Press kit", "Contact", "Look", "Hub shortcuts"] as const;
 type Tab = (typeof TABS)[number];
 
 const newId = () => crypto.randomUUID();
@@ -171,7 +174,18 @@ export function StudioEditor({ initial, version: initialVersion, storage }: Prop
             noun="release"
             addLabel="Add a new release"
             addToTop
-            create={() => ({ id: newId(), title: "", type: "single", releaseDate: "", cover: "", description: "", smartLink: "", links: emptyListenLinks() })}
+            create={() => ({
+              id: newId(),
+              title: "",
+              type: "single",
+              releaseDate: "",
+              cover: "",
+              description: "",
+              smartLink: "",
+              links: emptyListenLinks(),
+              slug: "",
+              lyrics: "",
+            })}
             heading={(r, i) => (i === 0 ? `${r.title || "Untitled"} — shown as your latest release` : r.title || "Untitled")}
             intro="Newest first. The top release is the big one on your page. If its date is in the future, the page shows a live countdown and a pre-save button."
             render={(r, set) => (
@@ -197,10 +211,25 @@ export function StudioEditor({ initial, version: initialVersion, storage }: Prop
                   onChange={(smartLink) => set({ smartLink })}
                 />
                 <ImageField label="Cover art" ctx={ctx} value={r.cover} onChange={(cover) => set({ cover })} />
+                <Field
+                  label="Page address"
+                  value={r.slug}
+                  placeholder={slugify(r.title) || "made-from-the-title"}
+                  hint={`Its own page: /music/${releaseSlug(r)} — share this link anywhere. Leave blank to use the title.`}
+                  onChange={(slug) => set({ slug: slugInput(slug) })}
+                />
                 <Field label="Short description" wide multiline value={r.description} onChange={(description) => set({ description })} />
                 {LISTEN_PLATFORMS.map((key) => (
                   <PlatformField key={key} platform={key} value={r.links[key]} onChange={(v) => set({ links: { ...r.links, [key]: v } })} />
                 ))}
+                <Field
+                  label="Lyrics (optional)"
+                  wide
+                  multiline
+                  hint="Shown on the release page. Leave an empty line between verses. Add translations of Yoruba or Pidgin lines if you like."
+                  value={r.lyrics}
+                  onChange={(lyrics) => set({ lyrics })}
+                />
               </div>
             )}
           />
@@ -265,6 +294,52 @@ export function StudioEditor({ initial, version: initialVersion, storage }: Prop
           />
         ) : null}
 
+        {tab === "Press kit" ? (
+          <>
+            <Section title="Press kit page" hint="Your /press page for promoters, bookers and media. It uses your bio, photo, latest release and booking email automatically.">
+              <div className="fields">
+                <Field
+                  label="Short bio (2–3 sentences)"
+                  wide
+                  multiline
+                  hint="The quick version promoters copy into posters and listings. Leave blank to use the first paragraph of your bio."
+                  value={content.press.shortBio}
+                  onChange={(shortBio) => patch("press", { shortBio })}
+                />
+              </div>
+            </Section>
+            <ListEditor<PressHighlight>
+              items={content.press.highlights}
+              onChange={(highlights) => patch("press", { highlights })}
+              noun="highlight"
+              addLabel="Add a highlight"
+              create={() => ({ id: newId(), text: "" })}
+              heading={(h, i) => h.text || `Highlight ${i + 1}`}
+              intro="Big moments in one line each: streams, playlists, shows, press. e.g. “1M+ streams across platforms” or “Featured on Spotify’s Afro Hub playlist”."
+              render={(h, set) => (
+                <div className="fields">
+                  <Field label="Highlight" wide value={h.text} onChange={(text) => set({ text })} />
+                </div>
+              )}
+            />
+            <ListEditor<PressPhoto>
+              items={content.press.photos}
+              onChange={(photos) => patch("press", { photos })}
+              noun="photo"
+              addLabel="Add a press photo"
+              create={() => ({ id: newId(), image: "", caption: "" })}
+              heading={(p, i) => p.caption || `Photo ${i + 1}`}
+              intro="High-quality photos promoters can download. Uploads are cleaned of hidden location data automatically."
+              render={(p, set) => (
+                <div className="fields">
+                  <ImageField label="Photo" ctx={ctx} value={p.image} onChange={(image) => set({ image })} />
+                  <Field label="Caption / photo credit" value={p.caption} onChange={(caption) => set({ caption })} />
+                </div>
+              )}
+            />
+          </>
+        ) : null}
+
         {tab === "Contact" ? (
           <Section title="Bookings, press & fans">
             <div className="fields">
@@ -272,7 +347,7 @@ export function StudioEditor({ initial, version: initialVersion, storage }: Prop
               <Field
                 label="Press kit link"
                 type="url"
-                hint="A Google Drive/Dropbox folder with photos, bio and logos."
+                hint="Optional. Leave blank to use your built-in /press page (set it up in the Press kit tab)."
                 value={content.contact.pressKitUrl}
                 onChange={(pressKitUrl) => patch("contact", { pressKitUrl })}
               />

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { SLUG_PATTERN, releaseSlug } from "@/lib/slug";
+
 // Everything the public site shows lives in content/site.json and is checked
 // against this schema on every read and every save. Anything that doesn't fit
 // (a link that isn't https, a script tag pasted into a name, a 10MB bio) is
@@ -78,7 +80,33 @@ const release = z.object({
   // A DistroKid HyperFollow (or other smart/pre-save) link.
   smartLink: optionalUrl,
   links: listenLinks,
+  // The release's own page: /music/<slug>. Blank = made from the title.
+  slug: z
+    .string()
+    .transform((value) => value.replace(/^-+|-+$/g, ""))
+    .pipe(z.union([z.literal(""), z.string().max(60).regex(SLUG_PATTERN, "Use lowercase letters, numbers and dashes only")]))
+    .default(""),
+  lyrics: text(12000).default(""),
 });
+
+const releaseList = z
+  .array(release)
+  .max(60)
+  .default([])
+  .superRefine((releases, ctx) => {
+    const seen = new Map<string, number>();
+    releases.forEach((r, i) => {
+      const slug = releaseSlug(r);
+      if (seen.has(slug)) {
+        ctx.addIssue({
+          code: "custom",
+          path: [i, "slug"],
+          message: `Two releases would share the page /music/${slug}. Give one a different page address.`,
+        });
+      }
+      seen.set(slug, i);
+    });
+  });
 
 const video = z.object({
   id: itemId,
@@ -92,6 +120,17 @@ const show = z.object({
   city: text(80).min(1, "Every show needs a city"),
   venue: text(120).default(""),
   ticketUrl: optionalUrl,
+});
+
+const pressHighlight = z.object({
+  id: itemId,
+  text: text(160).min(1, "Highlights can't be empty"),
+});
+
+const pressPhoto = z.object({
+  id: itemId,
+  image: imageRef.refine(Boolean, "Add an image or remove this photo"),
+  caption: text(120).default(""),
 });
 
 export const HUB_GROUPS = ["create", "stats", "money", "profiles", "tools"] as const;
@@ -120,7 +159,7 @@ export const siteSchema = z.object({
   }),
   links: artistLinks,
   // The first release in the list is shown as the big "latest release".
-  releases: z.array(release).max(60).default([]),
+  releases: releaseList,
   videos: z.object({
     // When on (and a YouTube API key is set up), the site shows your newest
     // uploads automatically instead of the list below.
@@ -142,6 +181,14 @@ export const siteSchema = z.object({
   hub: z.object({
     links: z.array(hubLink).max(40).default([]),
   }),
+  // The /press page for promoters, bookers and media.
+  press: z
+    .object({
+      shortBio: text(700).default(""),
+      highlights: z.array(pressHighlight).max(10).default([]),
+      photos: z.array(pressPhoto).max(12).default([]),
+    })
+    .prefault({}),
 });
 
 export type SiteContent = z.infer<typeof siteSchema>;
@@ -150,6 +197,8 @@ export type Video = SiteContent["videos"]["items"][number];
 export type Show = SiteContent["shows"][number];
 export type HubLink = SiteContent["hub"]["links"][number];
 export type HubGroup = (typeof HUB_GROUPS)[number];
+export type PressHighlight = SiteContent["press"]["highlights"][number];
+export type PressPhoto = SiteContent["press"]["photos"][number];
 
 /** Turn schema errors into short, human sentences for the Studio. */
 export function describeIssues(error: z.ZodError): string[] {

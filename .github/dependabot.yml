@@ -1,10 +1,15 @@
 # Opens pull requests when a dependency has a security fix or update.
+# Major versions are skipped: they can break the build and need a person to
+# upgrade deliberately. Security updates are always proposed.
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       dependencies:
         patterns: ["*"]

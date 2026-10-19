@@ -5,6 +5,9 @@ One website, three parts:
 | Part | Address | Who sees it | What it's for |
 | --- | --- | --- | --- |
 | **Artist page** | `/` | Everyone | Your professional page: latest release with a live countdown and pre-save, every streaming platform, videos, shows, bio, bookings. |
+| **Release pages** | `/music/song-name` | Everyone | One page per release: countdown and pre-save before release day, every platform and a player after, plus lyrics. Share it anywhere; it shows the cover art in WhatsApp/Instagram previews. |
+| **Link in bio** | `/links` | Everyone | Put this one link in your TikTok, Instagram and YouTube bios instead of Linktree. |
+| **Press kit** | `/press` | Everyone | For promoters, bookers and media: short bio, highlights, downloadable photos, latest release, booking email. Prints as a clean one-sheet. |
 | **Studio** | `/studio` | Only you | Edit everything on the artist page yourself: text, photos, cover art, releases, links, shows, colour. Press **Save & publish**. |
 | **Hub** | `/hub` | Only you | Your command centre: one tap to upload to YouTube/TikTok/Instagram/DistroKid/Audiomack/SoundCloud, open Spotify for Artists, Apple Music for Artists, YouTube Studio, DistroKid bank, live YouTube numbers, a release checklist, and your own extra shortcuts. |
 
@@ -78,6 +81,8 @@ Open `https://YOUR-DOMAIN/hub` → **Continue with Google**. Then go to **Studio
 ## Using it
 
 - **New single coming?** Studio → Releases → **Add a new release**. Set the date in the future and paste your DistroKid HyperFollow link as the pre-save link. The page shows a live countdown and a pre-save button, then switches to "Out now" with every platform on release day by itself.
+- **Every release has its own page** at `/music/…` (made from the title, or set your own under *Page address*). Add lyrics in the same form. The Hub's **Share links** box has copy buttons for these, your link-in-bio and your press kit.
+- **Press kit:** Studio → Press kit for the short bio, highlights (e.g. "1M+ streams") and press photos.
 - **The top release is the big one.** Use the ↑ ↓ buttons to reorder.
 - **Videos update themselves** if you add your YouTube channel ID (Studio → Videos) and the `YOUTUBE_API_KEY`.
 - **Every save is kept.** Hub → *Site history* shows every version. To undo a bad save, open that commit on GitHub and revert it (or ask Claude to).
@@ -134,8 +139,6 @@ The public site only ever shows what you type into the Studio. These are the pla
 - **Your own fan list**: email/WhatsApp sign-ups tagged by city (Lagos, London, Houston…) for tour planning and release-day blasts.
 - **Weekly stats log** in the Hub: type in Spotify/Apple/Audiomack numbers each week and see the trend.
 - **Upload to YouTube from the Hub** (after Google's audit) and **TikTok drafts**.
-- **Lyrics pages** with Yoruba/Pidgin translations, which also help people find you on Google.
-- **Press kit page** (`/press`) for promoters: one-sheet, downloadable photos, key numbers.
 - **"Era" themes** that re-skin the whole site for each album.
 
 ---
@@ -158,6 +161,8 @@ Without `GITHUB_TOKEN`, local development saves straight to `content/site.json`.
 | `content/site.json` | All public page content (validated by `src/lib/content/schema.ts`) |
 | `src/app/page.tsx` | Public artist page |
 | `src/app/studio/` | Studio page and its server actions (save, upload) |
+| `src/app/music/[slug]/page.tsx` | Release pages |
+| `src/app/links/page.tsx`, `src/app/press/page.tsx` | Link-in-bio and press kit |
 | `src/app/hub/page.tsx` | Hub |
 | `src/lib/hub-links.ts` | Built-in Hub shortcuts |
 | `src/lib/auth/` | Google sign-in and session cookie |

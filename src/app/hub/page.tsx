@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
 
+import { CopyLink } from "@/components/hub/CopyLink";
 import { ReleaseChecklist } from "@/components/hub/ReleaseChecklist";
 import { PlatformIcon } from "@/components/Icon";
 import { OwnerBar } from "@/components/OwnerBar";
 import { requireOwner } from "@/lib/auth/session";
 import { HUB_GROUPS, LISTEN_PLATFORMS, SOCIAL_PLATFORMS, type HubGroup } from "@/lib/content/schema";
 import { getEditableContent } from "@/lib/content/store";
-import { githubConfig } from "@/lib/env";
+import { githubConfig, siteUrl } from "@/lib/env";
 import { compactNumber, formatDate, todayIso } from "@/lib/format";
 import { BUILT_IN_LAUNCHERS, GROUP_TITLES, githubHistoryLauncher, type Launcher } from "@/lib/hub-links";
 import { filledLinks } from "@/lib/platforms";
+import { releasePath } from "@/lib/releases";
 import { channelStats, isYouTubeConfigured } from "@/lib/youtube";
 
 export const metadata: Metadata = { title: "Hub", robots: { index: false, follow: false } };
@@ -44,6 +46,16 @@ export default async function HubPage() {
   }
 
   const latest = content.releases[0];
+  const base = siteUrl();
+  const shareLinks = [
+    { label: "Link in bio", hint: "Put this in your TikTok, Instagram and YouTube bios", url: `${base}/links` },
+    { label: "Press kit", hint: "Send to promoters, bookers and blogs", url: `${base}/press` },
+    ...content.releases.slice(0, 4).map((r, i) => ({
+      label: r.title || "Untitled release",
+      hint: i === 0 ? "Your latest release page: share it everywhere" : "Release page",
+      url: `${base}${releasePath(r)}`,
+    })),
+  ];
   const nextShow = content.shows
     .filter((s) => s.date && s.date >= todayIso())
     .sort((a, b) => a.date.localeCompare(b.date))[0];
@@ -95,6 +107,15 @@ export default async function HubPage() {
         ) : null}
 
         <div className="hub-grid">
+          <section className="hub-group" aria-labelledby="hub-share">
+            <h2 id="hub-share">Share links</h2>
+            <ul className="share-list">
+              {shareLinks.map((l) => (
+                <CopyLink key={l.url} {...l} />
+              ))}
+            </ul>
+          </section>
+
           {HUB_GROUPS.map((group) =>
             groups[group].length > 0 ? (
               <section key={group} className="hub-group" aria-labelledby={`hub-${group}`}>

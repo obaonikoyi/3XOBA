@@ -1,23 +1,22 @@
 import { headers } from "next/headers";
+import Link from "next/link";
 
 import { Countdown } from "@/components/Countdown";
 import { Cover } from "@/components/Cover";
 import { EmbedPlayer } from "@/components/EmbedPlayer";
 import { PlatformIcon } from "@/components/Icon";
+import { PlatformButtons } from "@/components/PlatformButtons";
+import { SiteFooter } from "@/components/SiteFooter";
 import { getPublishedContent } from "@/lib/content/store";
-import { LISTEN_PLATFORMS, SOCIAL_PLATFORMS, type Release } from "@/lib/content/schema";
+import { LISTEN_PLATFORMS, SOCIAL_PLATFORMS } from "@/lib/content/schema";
 import { bestEmbed, embedFor, youtubeId, youtubeThumbnail } from "@/lib/embeds";
 import { siteUrl } from "@/lib/env";
 import { formatDate, paragraphs, todayIso } from "@/lib/format";
 import { filledLinks } from "@/lib/platforms";
+import { isUpcoming, RELEASE_LABEL, releasePath } from "@/lib/releases";
 import { latestUploads } from "@/lib/youtube";
 
-const RELEASE_LABEL: Record<Release["type"], string> = { single: "Single", ep: "EP", album: "Album", mixtape: "Mixtape" };
 const ALL_PLATFORMS = [...LISTEN_PLATFORMS, ...SOCIAL_PLATFORMS] as const;
-
-function releaseHref(release: Release) {
-  return release.smartLink || LISTEN_PLATFORMS.map((key) => release.links[key]).find(Boolean) || "";
-}
 
 export default async function Home() {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
@@ -26,8 +25,7 @@ export default async function Home() {
   const today = todayIso();
 
   const latest = releases[0];
-  const upcoming = Boolean(latest?.releaseDate && latest.releaseDate > today);
-  const latestLinks = latest ? filledLinks(latest.links, LISTEN_PLATFORMS) : [];
+  const upcoming = latest ? isUpcoming(latest, today) : false;
   const latestEmbed = latest ? bestEmbed(latest.links) : null;
   const socials = filledLinks(site.links, ALL_PLATFORMS);
 
@@ -45,7 +43,8 @@ export default async function Home() {
     .sort((a, b) => (a.date || "9999").localeCompare(b.date || "9999"));
 
   const hasAbout = Boolean(artist.bio || artist.photo);
-  const hasContact = Boolean(contact.bookingEmail || contact.pressKitUrl || newsletter.url);
+  const pressHref = contact.pressKitUrl || "/press";
+  const hasContact = Boolean(contact.bookingEmail || newsletter.url || artist.bio || site.press.shortBio);
   const nav = [
     latest && ["#music", "Music"],
     videos.length > 0 && ["#videos", "Videos"],
@@ -107,10 +106,14 @@ export default async function Home() {
             <h1 className="h-display hero-name">{artist.name}</h1>
             {artist.tagline ? <p className="hero-tagline">{artist.tagline}</p> : null}
             <div className="hero-actions">
-              {latest && releaseHref(latest) ? (
-                <a className="btn btn-primary" href={releaseHref(latest)} target="_blank" rel="noopener noreferrer">
-                  {upcoming ? "Pre-save" : "Listen to"} “{latest.title}”
+              {latest && upcoming && latest.smartLink ? (
+                <a className="btn btn-primary" href={latest.smartLink} target="_blank" rel="noopener noreferrer">
+                  Pre-save “{latest.title}”
                 </a>
+              ) : latest ? (
+                <Link className="btn btn-primary" href={releasePath(latest)}>
+                  {upcoming ? "Coming soon:" : "Listen to"} “{latest.title}”
+                </Link>
               ) : null}
               {latest ? (
                 <a className="btn" href="#music">
@@ -162,24 +165,13 @@ export default async function Home() {
                       </p>
                     ) : null}
 
-                    {!upcoming && latestLinks.length > 0 ? (
-                      <>
-                        <p className="eyebrow">Choose your platform</p>
-                        <div className="platform-grid">
-                          {latestLinks.map((l) => (
-                            <a key={l.key} className="platform-btn" href={l.url} target="_blank" rel="noopener noreferrer">
-                              <PlatformIcon icon={l.icon} name={l.name} size={22} />
-                              {l.name}
-                              <span className="go" aria-hidden="true">
-                                ↗
-                              </span>
-                            </a>
-                          ))}
-                        </div>
-                      </>
-                    ) : null}
-
+                    {!upcoming ? <PlatformButtons release={latest} /> : null}
                     {!upcoming && latestEmbed ? <EmbedPlayer embed={latestEmbed} title={latest.title} /> : null}
+                    <p className="release-more">
+                      <Link href={releasePath(latest)}>
+                        {latest.lyrics ? "Lyrics & full release page" : "Full release page"} →
+                      </Link>
+                    </p>
                   </div>
                 </div>
 
@@ -187,26 +179,16 @@ export default async function Home() {
                   <>
                     <h2 className="h-section disco-title">Discography</h2>
                     <div className="disco">
-                      {releases.slice(1).map((r) => {
-                        const href = releaseHref(r);
-                        const body = (
-                          <>
-                            <Cover src={r.cover} title={r.title} />
-                            <h3>{r.title}</h3>
-                            <p>
-                              {RELEASE_LABEL[r.type]}
-                              {r.releaseDate ? ` · ${r.releaseDate.slice(0, 4)}` : ""}
-                            </p>
-                          </>
-                        );
-                        return href ? (
-                          <a key={r.id} href={href} target="_blank" rel="noopener noreferrer">
-                            {body}
-                          </a>
-                        ) : (
-                          <div key={r.id}>{body}</div>
-                        );
-                      })}
+                      {releases.slice(1).map((r) => (
+                        <Link key={r.id} href={releasePath(r)}>
+                          <Cover src={r.cover} title={r.title} />
+                          <h3>{r.title}</h3>
+                          <p>
+                            {RELEASE_LABEL[r.type]}
+                            {r.releaseDate ? ` · ${r.releaseDate.slice(0, 4)}` : ""}
+                          </p>
+                        </Link>
+                      ))}
                     </div>
                   </>
                 ) : null}
@@ -318,15 +300,19 @@ export default async function Home() {
                     </a>
                   </div>
                 ) : null}
-                {contact.pressKitUrl ? (
-                  <div className="card">
-                    <h3>Press kit</h3>
-                    <p>Photos, bio and logos for media and promoters.</p>
-                    <a className="btn btn-small" href={contact.pressKitUrl} target="_blank" rel="noopener noreferrer">
+                <div className="card">
+                  <h3>Press kit</h3>
+                  <p>Bio, photos and highlights for media and promoters.</p>
+                  {contact.pressKitUrl ? (
+                    <a className="btn btn-small" href={pressHref} target="_blank" rel="noopener noreferrer">
                       Open press kit
                     </a>
-                  </div>
-                ) : null}
+                  ) : (
+                    <Link className="btn btn-small" href={pressHref}>
+                      Open press kit
+                    </Link>
+                  )}
+                </div>
                 {newsletter.url ? (
                   <div className="card">
                     <h3>{newsletter.label}</h3>
@@ -342,20 +328,7 @@ export default async function Home() {
         ) : null}
       </main>
 
-      <footer className="site-footer">
-        <div className="wrap">
-          <div className="hero-socials footer-socials">
-            {socials.map((s) => (
-              <a key={s.key} className="icon-link" href={s.url} target="_blank" rel="noopener noreferrer" aria-label={s.name} title={s.name}>
-                <PlatformIcon icon={s.icon} name={s.name} size={16} />
-              </a>
-            ))}
-          </div>
-          <small>
-            © {new Date().getFullYear()} {artist.name}
-          </small>
-        </div>
-      </footer>
+      <SiteFooter site={site} />
     </>
   );
 }
